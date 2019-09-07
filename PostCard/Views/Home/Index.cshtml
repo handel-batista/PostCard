@@ -1,0 +1,469 @@
+﻿@model UploadedDataViewModel
+
+
+@{
+    ViewData["Title"] = "Home Page";
+}
+
+<div ng-controller="ImageUploadPreviewCtrl">
+
+    <div class="col-md-6">
+        <form class="form-horizontal" enctype="multipart/form-data" asp-controller="Home" asp-action="Index" method="post" name="EmailForm" novalidate>
+            <fieldset>
+
+                <!--Form header-->
+                <div>
+                    <div class="section-title text-center mb-5">
+                        <span class="sub-title mb-2 d-block"></span>
+                        <h3 class="title text-primary">Send your selected file(s) as an email attachment.</h3>
+                        <hr />
+                    </div>
+                </div>
+
+                <!--Name-->
+                <div class="form-group" ng-class="{'has-error' : EmailForm.Name.$invalid && EmailForm.Name.$touched}">
+                    <label class="col-md-2 control-label" asp-for="Name">Name:</label>
+                    <div class="col-md-10">
+                        <input id="Name"
+                               asp-for="Name"
+                               name="Name"
+                               type="text"
+                               placeholder="Full Name"
+                               class="form-control input-md"
+                               ng-model="Name"
+                               ng-minlength="3"
+                               ng-required="true" />
+                        <span asp-validation-for="Name" class="text-danger" ng-show="EmailForm.Name.$error.required && EmailForm.Name.$touched">The Name is required.</span>
+                        <span class="text-danger" ng-show="EmailForm.Name.$error.minlength && EmailForm.Name.$touched">Please enter at least 3 characters.</span>
+                    </div>
+                </div>
+
+                <!--Email-->
+                <div class="form-group" ng-class="{'has-error' : EmailForm.Email.$invalid && EmailForm.Email.$touched}">
+                    <label class="col-md-2 control-label" asp-for="Email">Email:</label>
+                    <div class="col-md-10">
+                        <input id="Email"
+                               asp-for="Email"
+                               name="Email"
+                               type="email"
+                               onblur="angular.element(this).scope().getUploadedImages(this)"
+                               placeholder="youremail@domain.com"
+                               class="form-control input-md"
+                               ng-model="Email"
+                               ng-minlength="3"
+                               ng-required="true" />
+                        <span asp-validation-for="Email" class="text-danger" ng-show="EmailForm.Email.$error.required && EmailForm.Email.$touched">The Email is required.</span>
+                        <span class="text-danger" ng-show="EmailForm.Email.$error.minlength && EmailForm.Email.$touched">Invalid email address.</span>
+                    </div>
+                </div>
+
+                <!--Subject-->
+                <div class="form-group" id="SubjectDiv">
+                    <label class="col-md-2 control-label" for="Subject">Subject:</label>
+                    <div class="col-md-10">
+                        <input id="Subject"
+                               name="Subject"
+                               asp-for="Subject"
+                               ng-model="Subject"
+                               type="text"
+                               onblur="angular.element(this).scope().subjectCheck()"
+                               placeholder="Post Card (Web)"
+                               class="form-control input-md" />
+                        <span class="hidden" id="SubjectSpan">The Subject is empty.</span>
+                    </div>
+
+                </div>
+
+                <!--Body-->
+                <div class="form-group" id="EmailBodyDiv">
+                    <label class="col-md-2 control-label" for="Emailbody">Body</label>
+                    <div class="col-md-10">
+                        <textarea class="form-control"
+                                  id="Emailbody"
+                                  name="EmailBody"
+                                  ng-model="EmailBody"
+                                  asp-for="EmailBody"
+                                  onblur="angular.element(this).scope().mailBodyCheck()"
+                                  placeholder="Message"
+                                  rows="5">
+                        </textarea>
+                        <span class="hidden" id="EmailBodySpan">The body is empty.</span>
+                    </div>
+                </div>
+
+                <!--Send Button-->
+                <div class="form-group">
+                    <label class="col-md-2 col-xs-2 control-label" for="btnSend"></label>
+                    <div class="col-md-4 col-xs-4">
+                        <button id="btnSend" name="btnSend" on class="btn btn-primary" onclick="SetBase64()" type="submit" ng-disabled="EmailForm.$invalid||submitDisable">Send Message</button>
+                    </div>
+                    <span id="SpanServerMessages" class="col-md-6 col-xs-6 @ViewBag.CssClassName">@ViewBag.ServerMessage</span>
+                </div>
+
+                <!--Hidden fields
+                    The input id="Image" is hidden because I prefer to use a button for better styling.
+                    The input id="base64" holds the Base64 string generated from the canvas element when the form it's submited.' 
+                -->
+                <div class="form-group hidden">
+                    <div class="col-md-10 col-xs-10">
+                        <input class="form-control" id="Image" type="file" name="Image" ng-model="Image" onchange="angular.element(this).scope().setFile(this)" accept="image/*" />
+                        <input asp-for="Base64" class="form-control" id="base64" />
+                    </div>
+                </div>
+            </fieldset>
+
+        </form>
+
+    </div>
+
+
+    <div class="col-md-6">
+
+        <!--Table header-->
+        <div class="form-group">
+            <div class="section-title text-center mb-5 xs-5">
+                <span class="sub-title mb-2 d-block"></span>
+                <h3 class="title text-primary">Image Queue</h3>
+                <hr />
+            </div>
+        </div>
+
+        <!--File Upload Button-->
+        <div class="form-group col-md-5 col-xs-5">
+            <div class="custom-file col-md-12 col-xs-12">
+                <button class="btn btn-primary btnChoose introduction-farm" type="button" onclick="document.getElementById('Image').click()">Choose Image...</button>
+            </div>
+        </div>
+
+        <!--With this input we write the text to edit the image-->
+        <div class="form-group col-md-5 col-xs-5">
+            <div class="col-md-12 col-xs-12">
+                <input type="text" maxlength="20" class="form-control" id="ImageMessage" name="ImageMessage" placeholder="Image text" />
+            </div>
+        </div>
+
+        <!--Camera icon-->
+        <div class="col-md-2 col-xs-2">
+            <div class="col-md-12">
+                <span class="glyphicon glyphicon-camera" id="Capture"></span>
+            </div>
+        </div>
+
+        <!--The image error span-->
+        <div class="form-group col-md-12 col-xs-12 hidden" id="ImageErrorDiv">
+            <div class="col-md-12 col-xs-12">
+                <span class="text-danger">Please select an image.</span>
+            </div>
+        </div>
+
+        <!--This image container holds the image taken from the file input-->
+        <div class="col-md-12 col-xs-12" style="height:21vh;overflow:auto;">
+            <div class="col-md-12">
+                <img id="Iholder" width="478" height="183" />
+                <canvas id="canvas" style="display:none;" />
+                <video id="Video" controls="controls" autoplay="autoplay"></video>
+            </div>
+        </div>
+
+        <!--The HTML table to display the file's details when the the image it's taken from the user computer-->
+        <div class="col-md-12 col-xs-12 tbpreview" style="height:13vh;overflow:auto;">
+
+            <div class="col-md-12">
+                <table class="table table-bordered table-responsive table-striped" id="tbPreview">
+                    <thead>
+                        <tr>
+                            <th>File Name</th>
+                            <th>File Type</th>
+                            <th>File Size</th>
+                            <th>Status</th>
+                            <th>controls</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr ng-repeat="file in fileList">
+                            <td>{{file.file.name}}</td>
+                            <td>{{file.file.type}}</td>
+                            <td>{{file.file.size}}</td>
+                            <td class="text-warning">Pending</td>
+                            <td class="btn-link">
+                                <button class="btn btndelete" style="color:red;" ng-click="deleteRow($index)">Delete</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+            </div>
+        </div>
+
+    </div>
+
+
+    <div class="col-md-12 col-xs-12">
+
+        <!--Table header-->
+        <div class="form-group">
+            <div class="section-title text-center mb-5 xs-5">
+                <span class="sub-title mb-2 d-block"></span>
+                <h3 class="title text-primary">Image(s) Sent</h3>
+                <hr />
+            </div>
+        </div>
+
+        <!--HTML table to display the previously sent images-->
+        <div class="col-md-12" style="height:35.2vh;overflow:auto;">
+            <div class="col-md-12">
+                <table class="table table-bordered table-responsive table-striped" id="tbSentImages">
+                    <thead>
+                        <tr>
+                            <th>Data Id</th>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Sent Date</th>
+                            <th>File Name</th>
+                            <th>Status</th>
+                            <th>Controls</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr ng-repeat="image in UploadedImages">
+                            <th>{{image.DataId}}</th>
+                            <th>{{image.Name}}</th>
+                            <th>{{image.Email}}</th>
+                            <td>{{image.SentDate}}</td>
+                            <td>{{image.ImageName}}</td>
+                            <td class="text-success">Uploaded</td>
+                            <td class="btn-link">
+                                <button class="btn btnImagesSentRemoval" style="color:red;" ng-click="deleteDatabaseEntry($index, this)">Delete</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts{
+    <script>
+
+        //Empties the server message span after 10 seconds
+        var HideServerMessages = setInterval(Timer, 10000);
+        function Timer() {
+            document.getElementById("SpanServerMessages").innerHTML = "";
+        }
+
+        //Loads the image into the img container on the input file change event;
+        //the image container.
+        var iholder = document.getElementById('Iholder');
+
+        //The canvas container use to write on top of the image.
+        var canvas = document.getElementById('canvas');
+        var CanTakePicture = true;
+        var ctx, w, h;
+
+        //Starts the video player and ready's the elements for the image capture.
+        const player = document.getElementById('Video');
+        const constraints = { video: true };
+        navigator.mediaDevices.getUserMedia(constraints)
+            .then((stream) => {
+                // Attach the video stream to the video element and autoplay.
+                player.srcObject = stream;
+            }).catch(error => {
+                console.log(error +
+                    " This computer doesn't any camera devices or the video play was denied."
+                );
+                CanTakePicture = false;
+            });
+
+
+        //When the choose file input changes, add the image to the image container and show
+        //the file details on the preview table. 
+        document.getElementById('Image').onchange = function (evt) {
+
+            //Shows the image element if hiden
+            iholder.style.display = '';
+
+            //Calls the angular function to populate the image name, type,
+            //status, etc...
+            angular.element(evt.target).scope().setFile(evt.target);
+
+            //Sets the img src
+            var tgt = evt.target || window.event.srcElement,
+                files = tgt.files;
+
+            if (FileReader && files && files.length) {
+                var fr = new FileReader();
+                fr.onload = function () {
+                    iholder.src = fr.result;
+                };
+                fr.readAsDataURL(files[0]);
+            }
+
+            //Sets the image element according the selected image size.
+            var img = iholder;
+            img.onload = function () {
+
+                w = img.naturalWidth || img.width;
+                h = img.naturalHeight || img.height;
+
+                if (w < 478) {
+                    iholder.width = w;
+                }
+                else { iholder.width = 478; }
+
+                if (h < 183) {
+                    iholder.height = h;
+                }
+                else { iholder.height = 183; }
+            }
+
+            //Sets the canvas an hides the img place holder
+            canvas.style.display = 'none';
+            ctx = canvas.getContext('2d');
+            canvas.width = iholder.width;
+            canvas.crossOrigin = "Anonymous";
+            canvas.height = iholder.height;
+            ctx.drawImage(iholder, 0, 0);
+            ctx.font = "20pt Verdana";
+
+        }
+
+        //adds the text to the image
+        document.getElementById('ImageMessage').onkeyup = function () {
+
+            if (iholder.display !== 'none' && iholder.src) {
+                iholder.style.display = 'none';
+            }
+
+            canvas.style.display = '';
+            if (document.getElementById('Image').value || canvas.display !== 'none') {
+                ctx.clearRect(0, 0, 478, 153);
+
+                //if the picture came from iholder
+                if (document.getElementById('Image').value) {
+                    //Redraw image in the canvas element when chosen
+                    ctx.drawImage(iholder, 0, 0);
+                }
+                else {
+                    //Redraw image when a picture is taken from the webcam
+                    ctx.drawImage(player, 0, 0);
+                }
+
+                //Adds the text to the image
+                ctx.fillStyle = "white";
+                ctx.fillText($(this).val(), 30, 70);
+            }
+        };
+
+
+        //Captures the image from the webcam
+        document.getElementById('Capture').addEventListener('click', function (ev) {
+
+            if (CanTakePicture) {
+
+                iholder.style.display = 'none';
+                if (iholder.src) {
+                    ClearImage('capture');
+                }
+
+                canvas.style.display = '';
+                ctx = canvas.getContext('2d');
+                ctx.font = "20pt Verdana";
+                ctx.drawImage(player, 0, 0, 478, 153);
+
+                //Hides the image required error since the canvas element holds an image
+                document.getElementById('ImageErrorDiv').style.display = 'none';
+
+                // Stop all video streams.
+                //player.srcObject.getVideoTracks().forEach(track => track.stop());
+            }
+            else
+            {
+                alert("This computer doesn't any camera devices or the video play was denied.");
+            }
+
+        }, false);
+
+        //Clears the previous image base on selection
+        function ClearImage(requester) {
+            if (requester === 'capture') {
+                document.getElementById('Image').value = '';
+                iholder.style.display = 'none';
+                iholder.src = '';
+
+                //Clears the preview table
+                let fileRow = document.getElementById('tbPreview').rows[1];
+                for (let i = 0; i < fileRow.cells.length; i++) {
+                    fileRow.cells[i].innerHTML = '';
+                }
+                fileRow.style.display = 'none';
+            }
+            else
+            {
+                canvas.style.display = 'none';
+            }
+        }
+
+        //Sets the base 64 string on the hidden input that would be tranfered to the server.
+        function SetBase64()
+        {
+            var Base64Input = document.getElementById("base64");
+            var image = document.getElementById("canvas").toDataURL();
+            image = image.replace('data:image/png;base64,', '');
+            Base64Input.setAttribute("value", image);
+        }
+
+        //The startIntro() function it's triggered when the help link it's clicked.
+        //This function descrives and shows how to use the site.
+        function startIntro() {
+            var intro = introJs();
+            intro.setOptions({
+                steps: [
+                    {
+                        intro: "Hello! Thank you for using the Post Card app! With this app, you can add text to your image(s) and send them as an attachment; Press next to start the tour.",
+                        position: 'left'
+
+                    },
+                    {
+                        element: document.querySelector('.btnChoose'),
+                        intro: "Start by selecting your image."
+                    },
+                    {
+                        element: document.querySelector('#ImageMessage'),
+                        intro: "Here you can add the text for your image here.",
+                        position: 'right'
+                    },
+                    {
+                        element: '#Capture',
+                        intro: 'Here you can snap a picture with your computers camera if you prefer.',
+                        position: 'left'
+                    },
+                    {
+                        element: '#Iholder',
+                        intro: "The image container holds the image the is currently being edited.",
+                        position: 'bottom'
+                    },
+                    {
+                        element: '#tbPreview',
+                        intro: 'The preview table shows details about your image.'
+                    },
+                    {
+                        element: '#btnSend',
+                        intro: "Once you're done editing your image, you can send it as an attachment to the provided email address. <br/> Note: The send button will become enabled once the Name, and the email fields are provided; the other fields are optional."
+                    },
+                    {
+                        element: '#tbSentImages',
+                        intro: 'The sent images table show all the images sent to an email address. The table gets populated when the email field holds a valid email address that was used to send image(s) previously.'
+                    },
+                    {
+                        element: '.btnImagesSentRemoval',
+                        intro: 'The delete button removes an entry from your sent history.'
+                    }
+                ]
+            });
+
+            intro.start();
+        }
+
+    </script>
+}
